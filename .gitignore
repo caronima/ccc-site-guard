@@ -1,0 +1,39 @@
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Security
+.env
+*.csr
+*.crt
+*.key
+*.srl
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Visual Studio Code: Local History for Visual Studio Code
+.history/
+
+# Visual Studio Code: Built Visual Studio Code Extensions
+*.vsix
+
+# WordPress
+.htaccess
+wp-config.php
+**/wp-admin
+**/wp-includes
+
+# Docker SSL My Local（WordPress）
+**/composer/vendor/
+
+# Docker SSL My Local（Apache）
+**/ssl/**
+!*.template
+!*.sh
