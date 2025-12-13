@@ -744,8 +744,23 @@ function ccc_sg_run_daily_report()
 		$report .= __("Plugins needing update:\n", CCC_SG_TEXTDOMAIN);
 		foreach ($plugins->response as $plugin_file => $info) {
 			$name = isset($all[$plugin_file]['Name']) ? $all[$plugin_file]['Name'] : ($info->slug ?? $plugin_file);
-			$cur  = $info->old_version ?? '';
-			$new  = $info->new_version ?? '';
+
+			// Current (installed) version
+			$cur = '';
+			if (isset($all[$plugin_file]['Version']) && $all[$plugin_file]['Version'] !== '') {
+				$cur = (string) $all[$plugin_file]['Version'];
+			} elseif (isset($plugins->checked[$plugin_file]) && $plugins->checked[$plugin_file] !== '') {
+				$cur = (string) $plugins->checked[$plugin_file];
+			} elseif (isset($info->old_version) && $info->old_version !== '') {
+				$cur = (string) $info->old_version;
+			}
+
+			// New (available) version
+			$new = (isset($info->new_version) && $info->new_version !== '') ? (string) $info->new_version : '';
+
+			if ($cur === '') $cur = __('unknown', CCC_SG_TEXTDOMAIN);
+			if ($new === '') $new = __('unknown', CCC_SG_TEXTDOMAIN);
+
 			$report .= "- {$name}: {$cur} → {$new}\n";
 		}
 		$report .= "\n";
@@ -756,8 +771,23 @@ function ccc_sg_run_daily_report()
 		foreach ($themes->response as $slug => $info) {
 			$theme = wp_get_theme($slug);
 			$name  = ($theme && $theme->exists()) ? $theme->get('Name') : $slug;
-			$cur   = $info['old_version'] ?? '';
-			$new   = $info['new_version'] ?? '';
+
+			// Current (installed) version
+			$cur = '';
+			if ($theme && $theme->exists() && $theme->get('Version')) {
+				$cur = (string) $theme->get('Version');
+			} elseif (isset($themes->checked[$slug]) && $themes->checked[$slug] !== '') {
+				$cur = (string) $themes->checked[$slug];
+			} elseif (isset($info['old_version']) && $info['old_version'] !== '') {
+				$cur = (string) $info['old_version'];
+			}
+
+			// New (available) version
+			$new = (isset($info['new_version']) && $info['new_version'] !== '') ? (string) $info['new_version'] : '';
+
+			if ($cur === '') $cur = __('unknown', CCC_SG_TEXTDOMAIN);
+			if ($new === '') $new = __('unknown', CCC_SG_TEXTDOMAIN);
+
 			$report .= "- {$name}: {$cur} → {$new}\n";
 		}
 		$report .= "\n";
