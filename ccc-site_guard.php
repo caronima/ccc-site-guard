@@ -832,24 +832,27 @@ function ccc_sg_parse_emails($raw)
 /*--------------------------------------------------------------
  * セキュリティ（Basic Auth優先）
  *--------------------------------------------------------------*/
+// Register Basic Auth hooks early.
+// - `plugins_loaded` runs before `init`, and before `login_init` / `admin_init` are fired.
+// - Callbacks themselves check plugin settings/scope, so registering them is safe.
+add_action('plugins_loaded', 'ccc_sg_register_basic_auth_hooks', 0);
+function ccc_sg_register_basic_auth_hooks()
+{
+	if (!has_action('login_init', 'ccc_sg_basic_auth_on_login')) {
+		add_action('login_init', 'ccc_sg_basic_auth_on_login', 0);
+	}
+	if (!has_action('admin_init', 'ccc_sg_basic_auth_on_admin')) {
+		add_action('admin_init', 'ccc_sg_basic_auth_on_admin', 0);
+	}
+	if (!has_action('init', 'ccc_sg_basic_auth_on_site')) {
+		add_action('init', 'ccc_sg_basic_auth_on_site', 0);
+	}
+}
+
 add_action('init', 'ccc_sg_boot_security', 0);
 function ccc_sg_boot_security()
 {
 	$s = ccc_sg_get_settings();
-
-	if (!empty($s['enable_basic_auth'])) {
-		$scope = $s['basic_auth_scope'] ?? 'admin';
-		if ($scope === 'admin') {
-			// 1) Login screen: always protected (works even when login URL is changed by another plugin).
-			add_action('login_init', 'ccc_sg_basic_auth_on_login', 0);
-			// 2) Admin area: protected only AFTER the user is logged in.
-			add_action('admin_init', 'ccc_sg_basic_auth_on_admin', 0);
-		} else {
-			// Entire site (use carefully).
-			// We are already running on init (priority 0), so run immediately to ensure it applies on this request.
-			ccc_sg_basic_auth_on_site();
-		}
-	}
 
 	if (!empty($s['enable_author_redirect'])) {
 		add_action('template_redirect', 'ccc_sg_custom_author_redirect', 0);
