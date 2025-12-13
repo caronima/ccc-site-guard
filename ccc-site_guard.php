@@ -415,16 +415,30 @@ function ccc_sg_render_settings_page()
 							<span class="ccc-sg-badge ng"><?php echo esc_html__('Not configured', CCC_SG_TEXTDOMAIN); ?></span>
 						<?php endif; ?>
 
+						<?php
+						// Button/intro text should differ between first-time setup and already-configured state.
+						$pass_btn_label = $has_pass
+							? __('Change password…', CCC_SG_TEXTDOMAIN)
+							: __('Set password…', CCC_SG_TEXTDOMAIN);
+
+						$pass_box_intro = $has_pass
+							? __('Enter a new password.', CCC_SG_TEXTDOMAIN)
+							: __('Set a password.', CCC_SG_TEXTDOMAIN);
+						?>
+
 						<p style="margin-top:10px;">
-							<button class="button" id="ccc-sg-pass-change-btn"><?php echo esc_html__('Change password…', CCC_SG_TEXTDOMAIN); ?></button>
-							<label style="margin-left:10px;">
-								<input type="checkbox" id="ccc-sg-pass-clear" name="basic_auth_clear" value="1">
-								<?php echo esc_html__('Clear password', CCC_SG_TEXTDOMAIN); ?>
-							</label>
+							<button class="button" id="ccc-sg-pass-change-btn"><?php echo esc_html($pass_btn_label); ?></button>
+
+							<?php if ($has_pass): ?>
+								<label style="margin-left:10px;">
+									<input type="checkbox" id="ccc-sg-pass-clear" name="basic_auth_clear" value="1">
+									<?php echo esc_html__('Clear password', CCC_SG_TEXTDOMAIN); ?>
+								</label>
+							<?php endif; ?>
 						</p>
 
 						<div id="ccc-sg-pass-change-box" style="display:none;">
-							<p style="margin-top:0;"><?php echo esc_html__('Enter a new password.', CCC_SG_TEXTDOMAIN); ?></p>
+							<p style="margin-top:0;"><?php echo esc_html($pass_box_intro); ?></p>
 							<p>
 								<label><?php echo esc_html__('New password', CCC_SG_TEXTDOMAIN); ?><br>
 									<input id="ccc-sg-pass1" type="password" class="regular-text" name="basic_auth_password1" autocomplete="new-password">
@@ -477,13 +491,6 @@ function ccc_sg_render_settings_page()
 		</form>
 	</div>
 <?php
-}
-
-function ccc_sg_get_auto_realm_domain_only()
-{
-	$host = $_SERVER['HTTP_HOST'] ?? parse_url(home_url(), PHP_URL_HOST);
-	$host = $host ?: 'site';
-	return 'CCC Site Guard - ' . $host;
 }
 
 function ccc_sg_sanitize_hhmm($v)
@@ -708,7 +715,17 @@ function ccc_sg_boot_security()
 	$s = ccc_sg_get_settings();
 
 	if (!empty($s['enable_basic_auth'])) {
-		ccc_sg_maybe_require_basic_auth($s);
+		$scope = $s['basic_auth_scope'] ?? 'admin';
+		if ($scope === 'admin') {
+			// 1) Login screen: always protected (works even when login URL is changed by another plugin).
+			add_action('login_init', 'ccc_sg_basic_auth_on_login', 0);
+			// 2) Admin area: protected only AFTER the user is logged in.
+			add_action('admin_init', 'ccc_sg_basic_auth_on_admin', 0);
+		} else {
+			// Entire site (use carefully).
+			// We are already running on init (priority 0), so run immediately to ensure it applies on this request.
+			ccc_sg_basic_auth_on_site();
+		}
 	}
 
 	if (!empty($s['enable_author_redirect'])) {
@@ -728,40 +745,55 @@ function ccc_sg_boot_security()
 }
 
 /* Basic Auth */
-function ccc_sg_maybe_require_basic_auth($s)
+function ccc_sg_basic_auth_on_login()
+{
+	$s = ccc_sg_get_settings();
+	if (empty($s['enable_basic_auth'])) return;
+	if (($s['basic_auth_scope'] ?? 'admin') !== 'admin') return;
+	ccc_sg_require_basic_auth($s);
+}
+
+function ccc_sg_basic_auth_on_admin()
+{
+	$s = ccc_sg_get_settings();
+	if (empty($s['enable_basic_auth'])) return;
+	if (($s['basic_auth_scope'] ?? 'admin') !== 'admin') return;
+
+	// Protect wp-admin only AFTER login.
+	if (!is_user_logged_in()) return;
+
+	// Exempt endpoints commonly used for async/background actions.
+	if (ccc_sg_is_exempt_basic_auth_admin_endpoint()) return;
+
+	ccc_sg_require_basic_auth($s);
+}
+
+function ccc_sg_basic_auth_on_site()
+{
+	$s = ccc_sg_get_settings();
+	if (empty($s['enable_basic_auth'])) return;
+	if (($s['basic_auth_scope'] ?? 'admin') !== 'site') return;
+
+	// Never challenge cron.
+	if (ccc_sg_is_wp_cron()) return;
+
+	ccc_sg_require_basic_auth($s);
+}
+
+function ccc_sg_require_basic_auth($s)
 {
 	// Never challenge internal processes
 	if (defined('DOING_CRON') && DOING_CRON) return;
 	if (defined('WP_CLI') && WP_CLI) return;
 
-	$scope     = $s['basic_auth_scope'] ?? 'admin';
-	$is_login  = ccc_sg_is_login_request();
-	$is_admin  = ccc_sg_is_wp_admin_request();
-
-	// Admin scope: the goal is "2-step" only when entering the login/admin UI.
-	// If the visitor is not logged in and requests wp-admin/*, WordPress will redirect to wp-login.php.
-	// Challenging on both wp-admin and then wp-login can cause a double prompt (e.g., due to redirects/origin changes).
-	if ($scope === 'admin') {
-		// Always protect the login screen.
-		if (!$is_login) {
-			// For wp-admin requests, only challenge AFTER the user is logged in.
-			// This also avoids challenging wp-admin assets used by the login screen (load-styles/load-scripts).
-			if (!$is_admin || !is_user_logged_in()) return;
-		}
-
-		// Exempt endpoints commonly used for async/background actions.
-		if (ccc_sg_is_exempt_basic_auth_admin_endpoint()) return;
-	} else {
-		// Site scope
-		if (ccc_sg_is_wp_cron()) return;
-	}
-
 	$user = (string)($s['basic_auth_user'] ?? '');
 	$hash = (string)($s['basic_auth_passhash'] ?? '');
-	if ($user === '' || $hash === '') return; // 揃っていないなら動かさない
+	if ($user === '' || $hash === '') return; // If not configured, do nothing.
 
 	list($in_user, $in_pass) = ccc_sg_get_basic_auth_credentials();
-	if ($in_user === null || $in_pass === null) ccc_sg_basic_auth_challenge($s);
+	if ($in_user === null || $in_pass === null) {
+		ccc_sg_basic_auth_challenge($s);
+	}
 
 	if (!hash_equals($user, (string)$in_user) || !wp_check_password((string)$in_pass, $hash)) {
 		ccc_sg_basic_auth_challenge($s);
@@ -770,7 +802,7 @@ function ccc_sg_maybe_require_basic_auth($s)
 
 function ccc_sg_basic_auth_challenge($s)
 {
-	$realm = ccc_sg_get_auto_realm_domain_only();
+	$realm = ccc_sg_plugin_name();
 	if (!headers_sent()) {
 		header('WWW-Authenticate: Basic realm="' . ccc_sg_header_safe($realm) . '"');
 		header('HTTP/1.0 401 Unauthorized');
@@ -795,11 +827,6 @@ function ccc_sg_get_basic_auth_credentials()
 	return array(null, null);
 }
 
-function ccc_sg_is_login_request()
-{
-	$uri = (string)($_SERVER['REQUEST_URI'] ?? '');
-	return (strpos($uri, 'wp-login.php') !== false);
-}
 
 function ccc_sg_is_wp_cron()
 {
@@ -807,11 +834,6 @@ function ccc_sg_is_wp_cron()
 	return (strpos($uri, 'wp-cron.php') !== false);
 }
 
-function ccc_sg_is_wp_admin_request()
-{
-	$uri = (string)($_SERVER['REQUEST_URI'] ?? '');
-	return (strpos($uri, '/wp-admin') !== false);
-}
 
 function ccc_sg_request_basename()
 {
