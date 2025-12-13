@@ -138,12 +138,13 @@ function ccc_sg_admin_assets($hook)
 
 	$js = <<<'JS'
 document.addEventListener('DOMContentLoaded', () => {
+  // Password UI
   const btn = document.getElementById('ccc-sg-pass-change-btn');
   const box = document.getElementById('ccc-sg-pass-change-box');
   const cancel = document.getElementById('ccc-sg-pass-change-cancel');
   const clear = document.getElementById('ccc-sg-pass-clear');
 
-  function setVisible(v){
+  function setPassBoxVisible(v){
     if(!box) return;
     box.style.display = v ? 'block' : 'none';
     if(v){
@@ -160,20 +161,63 @@ document.addEventListener('DOMContentLoaded', () => {
   if(btn){
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      setVisible(true);
+      setPassBoxVisible(true);
       if(clear) clear.checked = false;
     });
   }
   if(cancel){
     cancel.addEventListener('click', (e) => {
       e.preventDefault();
-      setVisible(false);
+      setPassBoxVisible(false);
     });
   }
   if(clear){
     clear.addEventListener('change', () => {
-      if(clear.checked) setVisible(false);
+      if(clear.checked) setPassBoxVisible(false);
     });
+  }
+
+  // Dependency UI (hide dependent settings until Enable is ON)
+  const dailyEnable = document.getElementById('ccc-sg-enable-daily-report');
+  const dailyDeps = document.querySelectorAll('.ccc-sg-dep-daily');
+  const dailyNote = document.getElementById('ccc-sg-daily-disabled-note');
+
+  const basicEnable = document.getElementById('ccc-sg-enable-basic-auth');
+  const basicDeps = document.querySelectorAll('.ccc-sg-dep-basic');
+  const basicNote = document.getElementById('ccc-sg-basic-disabled-note');
+
+  function setRowsVisible(nodes, visible){
+    nodes.forEach((el) => {
+      el.style.display = visible ? '' : 'none';
+    });
+  }
+
+  function syncDaily(){
+    const on = !!(dailyEnable && dailyEnable.checked);
+    setRowsVisible(dailyDeps, on);
+    if(dailyNote) dailyNote.style.display = on ? 'none' : 'block';
+  }
+
+  function syncBasic(){
+    const on = !!(basicEnable && basicEnable.checked);
+    setRowsVisible(basicDeps, on);
+    if(basicNote) basicNote.style.display = on ? 'none' : 'block';
+
+    // If Basic Auth is disabled, also close the password box UI to avoid confusion.
+    if(!on){
+      setPassBoxVisible(false);
+      if(clear) clear.checked = false;
+    }
+  }
+
+  if(dailyEnable){
+    dailyEnable.addEventListener('change', syncDaily);
+    syncDaily();
+  }
+
+  if(basicEnable){
+    basicEnable.addEventListener('change', syncBasic);
+    syncBasic();
   }
 });
 JS;
@@ -285,6 +329,40 @@ function ccc_sg_render_settings_page()
 	$has_pass = !empty($s['basic_auth_passhash']);
 	$has_user = !empty($s['basic_auth_user']);
 	$basic_ready = ($has_pass && $has_user);
+	$daily_enabled = !empty($s['enable_daily_report']);
+	$basic_enabled = !empty($s['enable_basic_auth']);
+	$daily_row_style = $daily_enabled ? '' : ' style="display:none;"';
+	$basic_row_style = $basic_enabled ? '' : ' style="display:none;"';
+
+	// Summaries shown when a section is disabled (avoid leaking sensitive values).
+	$daily_recipients = ccc_sg_parse_emails($s['notify_emails']);
+	$daily_recipient_count = is_array($daily_recipients) ? count($daily_recipients) : 0;
+	$daily_recipients_label = ($daily_recipient_count > 0)
+		? sprintf(
+			_n('%d recipient configured', '%d recipients configured', $daily_recipient_count, CCC_SG_TEXTDOMAIN),
+			$daily_recipient_count
+		)
+		: __('Not set', CCC_SG_TEXTDOMAIN);
+	$daily_even_label = !empty($s['send_even_if_empty']) ? __('On', CCC_SG_TEXTDOMAIN) : __('Off', CCC_SG_TEXTDOMAIN);
+	$daily_disabled_summary = sprintf(
+		__('Current saved settings: time %1$s, recipients %2$s, send even if empty %3$s.', CCC_SG_TEXTDOMAIN),
+		esc_html($s['daily_report_time']),
+		esc_html($daily_recipients_label),
+		esc_html($daily_even_label)
+	);
+
+	$basic_scope_label = (($s['basic_auth_scope'] ?? 'admin') === 'site')
+		? __('Entire site', CCC_SG_TEXTDOMAIN)
+		: __('Admin area', CCC_SG_TEXTDOMAIN);
+	$basic_user_label = $has_user ? __('Configured', CCC_SG_TEXTDOMAIN) : __('Not set', CCC_SG_TEXTDOMAIN);
+	$basic_pass_label = $has_pass ? __('Configured', CCC_SG_TEXTDOMAIN) : __('Not set', CCC_SG_TEXTDOMAIN);
+	$basic_disabled_summary = sprintf(
+		__('Current saved settings: scope %1$s, username %2$s, password %3$s.', CCC_SG_TEXTDOMAIN),
+		esc_html($basic_scope_label),
+		esc_html($basic_user_label),
+		esc_html($basic_pass_label)
+	);
+	$basic_disabled_summary_note = __('(Passwords are never displayed.)', CCC_SG_TEXTDOMAIN);
 ?>
 	<div class="wrap">
 		<h1><?php echo esc_html(ccc_sg_plugin_name()); ?></h1>
@@ -297,12 +375,18 @@ function ccc_sg_render_settings_page()
 				<tr>
 					<th scope="row"><?php echo esc_html__('Enable', CCC_SG_TEXTDOMAIN); ?></th>
 					<td><label>
-							<input type="checkbox" name="enable_daily_report" value="1" <?php checked($s['enable_daily_report'], 1); ?>>
+							<input id="ccc-sg-enable-daily-report" type="checkbox" name="enable_daily_report" value="1" <?php checked($s['enable_daily_report'], 1); ?>>
 							<?php echo esc_html__('Send a daily summary of available updates.', CCC_SG_TEXTDOMAIN); ?>
-						</label></td>
+						</label>
+						<div id="ccc-sg-daily-disabled-note" class="ccc-sg-subnote" style="display:<?php echo $daily_enabled ? 'none' : 'block'; ?>;">
+							<?php echo esc_html__('Turn on Enable to configure the schedule and notification settings below.', CCC_SG_TEXTDOMAIN); ?>
+							<br>
+							<?php echo esc_html($daily_disabled_summary); ?>
+						</div>
+					</td>
 				</tr>
 
-				<tr>
+				<tr class="ccc-sg-dep-daily" <?php echo $daily_row_style; ?>>
 					<th scope="row"><?php echo esc_html__('Send time (site timezone)', CCC_SG_TEXTDOMAIN); ?></th>
 					<td>
 						<input type="time" name="daily_report_time" value="<?php echo esc_attr($s['daily_report_time']); ?>">
@@ -310,7 +394,7 @@ function ccc_sg_render_settings_page()
 					</td>
 				</tr>
 
-				<tr>
+				<tr class="ccc-sg-dep-daily" <?php echo $daily_row_style; ?>>
 					<th scope="row"><?php echo esc_html__('Notification email(s)', CCC_SG_TEXTDOMAIN); ?></th>
 					<td>
 						<input type="text" class="regular-text" name="notify_emails"
@@ -320,7 +404,7 @@ function ccc_sg_render_settings_page()
 					</td>
 				</tr>
 
-				<tr>
+				<tr class="ccc-sg-dep-daily" <?php echo $daily_row_style; ?>>
 					<th scope="row"><?php echo esc_html__('Send even when there are no updates', CCC_SG_TEXTDOMAIN); ?></th>
 					<td><label>
 							<input type="checkbox" name="send_even_if_empty" value="1" <?php checked($s['send_even_if_empty'], 1); ?>>
@@ -375,7 +459,7 @@ function ccc_sg_render_settings_page()
 				<tr>
 					<th scope="row"><?php echo esc_html__('Enable', CCC_SG_TEXTDOMAIN); ?></th>
 					<td><label>
-							<input type="checkbox" name="enable_basic_auth" value="1" <?php checked($s['enable_basic_auth'], 1); ?>>
+							<input id="ccc-sg-enable-basic-auth" type="checkbox" name="enable_basic_auth" value="1" <?php checked($s['enable_basic_auth'], 1); ?>>
 							<?php echo esc_html__('Enable Basic Auth', CCC_SG_TEXTDOMAIN); ?>
 						</label>
 						<div class="ccc-sg-subnote">
@@ -389,10 +473,16 @@ function ccc_sg_render_settings_page()
 								<span class="ccc-sg-subnote"><?php echo esc_html__('Even if enabled, it will not work until both username and password are set.', CCC_SG_TEXTDOMAIN); ?></span>
 							<?php endif; ?>
 						</div>
+						<div id="ccc-sg-basic-disabled-note" class="ccc-sg-subnote" style="display:<?php echo $basic_enabled ? 'none' : 'block'; ?>;">
+							<?php echo esc_html__('Turn on Enable to configure scope, username and password.', CCC_SG_TEXTDOMAIN); ?>
+							<br>
+							<?php echo esc_html($basic_disabled_summary); ?>
+							<span style="margin-left:6px;"><?php echo esc_html($basic_disabled_summary_note); ?></span>
+						</div>
 					</td>
 				</tr>
 
-				<tr>
+				<tr class="ccc-sg-dep-basic" <?php echo $basic_row_style; ?>>
 					<th scope="row"><?php echo esc_html__('Scope', CCC_SG_TEXTDOMAIN); ?></th>
 					<td>
 						<label><input type="radio" name="basic_auth_scope" value="admin" <?php checked($s['basic_auth_scope'], 'admin'); ?>> <?php echo esc_html__('Admin area', CCC_SG_TEXTDOMAIN); ?></label><br>
@@ -401,12 +491,12 @@ function ccc_sg_render_settings_page()
 					</td>
 				</tr>
 
-				<tr>
+				<tr class="ccc-sg-dep-basic" <?php echo $basic_row_style; ?>>
 					<th scope="row"><?php echo esc_html__('Username', CCC_SG_TEXTDOMAIN); ?></th>
 					<td><input type="text" class="regular-text" name="basic_auth_user" value="<?php echo esc_attr($s['basic_auth_user']); ?>"></td>
 				</tr>
 
-				<tr>
+				<tr class="ccc-sg-dep-basic" <?php echo $basic_row_style; ?>>
 					<th scope="row"><?php echo esc_html__('Password', CCC_SG_TEXTDOMAIN); ?></th>
 					<td>
 						<?php if ($has_pass): ?>
