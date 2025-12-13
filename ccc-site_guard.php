@@ -734,10 +734,13 @@ function ccc_sg_run_daily_report()
 	$plugins = get_site_transient('update_plugins');
 	$themes  = get_site_transient('update_themes');
 	$core    = get_site_transient('update_core');
+	// Transients can be `false` in some cases; normalize to avoid warnings.
+	$plugins_checked = (is_object($plugins) && isset($plugins->checked) && is_array($plugins->checked)) ? $plugins->checked : array();
+	$themes_checked  = (is_object($themes) && isset($themes->checked) && is_array($themes->checked)) ? $themes->checked : array();
 
 	$report = "";
 
-	if (!empty($plugins->response)) {
+	if (is_object($plugins) && !empty($plugins->response)) {
 		if (!function_exists('get_plugins')) require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		$all = function_exists('get_plugins') ? get_plugins() : array();
 
@@ -749,8 +752,8 @@ function ccc_sg_run_daily_report()
 			$cur = '';
 			if (isset($all[$plugin_file]['Version']) && $all[$plugin_file]['Version'] !== '') {
 				$cur = (string) $all[$plugin_file]['Version'];
-			} elseif (isset($plugins->checked[$plugin_file]) && $plugins->checked[$plugin_file] !== '') {
-				$cur = (string) $plugins->checked[$plugin_file];
+			} elseif (isset($plugins_checked[$plugin_file]) && $plugins_checked[$plugin_file] !== '') {
+				$cur = (string) $plugins_checked[$plugin_file];
 			} elseif (isset($info->old_version) && $info->old_version !== '') {
 				$cur = (string) $info->old_version;
 			}
@@ -766,7 +769,7 @@ function ccc_sg_run_daily_report()
 		$report .= "\n";
 	}
 
-	if (!empty($themes->response)) {
+	if (is_object($themes) && !empty($themes->response)) {
 		$report .= __("Themes needing update:\n", CCC_SG_TEXTDOMAIN);
 		foreach ($themes->response as $slug => $info) {
 			$theme = wp_get_theme($slug);
@@ -776,8 +779,8 @@ function ccc_sg_run_daily_report()
 			$cur = '';
 			if ($theme && $theme->exists() && $theme->get('Version')) {
 				$cur = (string) $theme->get('Version');
-			} elseif (isset($themes->checked[$slug]) && $themes->checked[$slug] !== '') {
-				$cur = (string) $themes->checked[$slug];
+			} elseif (isset($themes_checked[$slug]) && $themes_checked[$slug] !== '') {
+				$cur = (string) $themes_checked[$slug];
 			} elseif (isset($info['old_version']) && $info['old_version'] !== '') {
 				$cur = (string) $info['old_version'];
 			}
@@ -793,7 +796,7 @@ function ccc_sg_run_daily_report()
 		$report .= "\n";
 	}
 
-	if (!empty($core->updates) && is_array($core->updates)) {
+	if (is_object($core) && !empty($core->updates) && is_array($core->updates)) {
 		foreach ($core->updates as $u) {
 			if (($u->response ?? '') === 'upgrade') {
 				$cur = get_bloginfo('version');
