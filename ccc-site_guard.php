@@ -379,7 +379,7 @@ function ccc_sg_render_settings_page()
 							<?php echo esc_html__('Send a daily summary of available updates.', CCC_SG_TEXTDOMAIN); ?>
 						</label>
 						<div id="ccc-sg-daily-disabled-note" class="ccc-sg-subnote" style="display:<?php echo $daily_enabled ? 'none' : 'block'; ?>;">
-							<?php echo esc_html__('Turn on Enable to configure the schedule and notification settings below.', CCC_SG_TEXTDOMAIN); ?>
+							<?php echo esc_html__('Turn on Enable to configure the schedule and notification settings below. Note: delivery timing depends on site requests (WP-Cron).', CCC_SG_TEXTDOMAIN); ?>
 							<br>
 							<?php echo esc_html($daily_disabled_summary); ?>
 						</div>
@@ -390,7 +390,10 @@ function ccc_sg_render_settings_page()
 					<th scope="row"><?php echo esc_html__('Send time (site timezone)', CCC_SG_TEXTDOMAIN); ?></th>
 					<td>
 						<input type="time" name="daily_report_time" value="<?php echo esc_attr($s['daily_report_time']); ?>">
-						<div class="ccc-sg-subnote"><?php echo esc_html__('Due to WP-Cron, the delivery time may be delayed by a few minutes depending on site traffic.', CCC_SG_TEXTDOMAIN); ?></div>
+						<div class="ccc-sg-subnote">
+							<?php echo esc_html__('This report uses WP-Cron (pseudo-cron). It is triggered by site requests, not by the server clock.', CCC_SG_TEXTDOMAIN); ?><br>
+							<?php echo esc_html__('It will be sent on the first site request *after* the scheduled time. On low-traffic sites, delivery can be delayed.', CCC_SG_TEXTDOMAIN); ?>
+						</div>
 					</td>
 				</tr>
 
