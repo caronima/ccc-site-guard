@@ -8,7 +8,7 @@
  * Author URI: https://caronima.com
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: ccc-site_guard
+ * Text Domain: ccc-site-guard
  * Domain Path: /languages
  */
 
@@ -116,7 +116,7 @@ function ccc_sg_add_settings_page()
 	add_submenu_page(
 		CCC_SG_MENU_SLUG,
 		ccc_sg_plugin_name(),
-		__('Settings', 'ccc-site_guard'),
+		__('Settings', 'ccc-site-guard'),
 		CCC_SG_CAP,
 		CCC_SG_MENU_SLUG,
 		'ccc_sg_render_settings_page'
@@ -276,18 +276,18 @@ function ccc_sg_render_settings_page()
 			$save['basic_auth_passhash'] = '';
 		}
 
-		// パスワード変更（A案：展開時だけ入力される）
-		$p1 = isset($_POST['basic_auth_password1']) ? sanitize_text_field(wp_unslash($_POST['basic_auth_password1'])) : '';
-		$p2 = isset($_POST['basic_auth_password2']) ? sanitize_text_field(wp_unslash($_POST['basic_auth_password2'])) : '';
+		// Passwords must not be sanitized/normalized; any transformation can break intended credentials.
+		$p1 = isset($_POST['basic_auth_password1']) ? (string) wp_unslash($_POST['basic_auth_password1']) : '';
+		$p2 = isset($_POST['basic_auth_password2']) ? (string) wp_unslash($_POST['basic_auth_password2']) : '';
 
 		if (!$do_clear && ($p1 !== '' || $p2 !== '')) {
 			if ($p1 === '' || $p2 === '') {
-				$notice = array('type' => 'error', 'msg' => __('Please fill in both Basic Auth password fields.', 'ccc-site_guard'));
+				$notice = array('type' => 'error', 'msg' => __('Please fill in both Basic Auth password fields.', 'ccc-site-guard'));
 			} elseif (!hash_equals($p1, $p2)) {
-				$notice = array('type' => 'error', 'msg' => __('Basic Auth passwords do not match.', 'ccc-site_guard'));
+				$notice = array('type' => 'error', 'msg' => __('Basic Auth passwords do not match.', 'ccc-site-guard'));
 			} else {
 				$save['basic_auth_passhash'] = wp_hash_password($p1);
-				$notice = array('type' => 'updated', 'msg' => __('Settings saved (Basic Auth password updated).', 'ccc-site_guard'));
+				$notice = array('type' => 'updated', 'msg' => __('Settings saved (Basic Auth password updated).', 'ccc-site-guard'));
 			}
 		}
 
@@ -303,7 +303,7 @@ function ccc_sg_render_settings_page()
 		ccc_sg_reschedule_daily_event();
 
 		if (empty($notice['msg'])) {
-			$notice = array('type' => 'updated', 'msg' => __('Settings saved.', 'ccc-site_guard'));
+			$notice = array('type' => 'updated', 'msg' => __('Settings saved.', 'ccc-site-guard'));
 		}
 	}
 
@@ -328,32 +328,34 @@ function ccc_sg_render_settings_page()
 	$daily_recipients_label = ($daily_recipient_count > 0)
 		? sprintf(
 			/* translators: %d is the number of email recipients configured */
-			_n('%d recipient configured', '%d recipients configured', $daily_recipient_count, 'ccc-site_guard'),
+			_n('%d recipient configured', '%d recipients configured', $daily_recipient_count, 'ccc-site-guard'),
 			$daily_recipient_count
 		)
-		: __('Not set', 'ccc-site_guard');
-	$daily_even_label = !empty($s['send_even_if_empty']) ? __('On', 'ccc-site_guard') : __('Off', 'ccc-site_guard');
+		: __('Not set', 'ccc-site-guard');
+	$daily_even_label = !empty($s['send_even_if_empty']) ? __('On', 'ccc-site-guard') : __('Off', 'ccc-site-guard');
 	/* translators: %1$s is time (HH:MM), %2$s is recipient count/status, %3$s is on/off status */
+	$daily_disabled_summary_format = __('Current saved settings: time %1$s, recipients %2$s, send even if empty %3$s.', 'ccc-site-guard');
 	$daily_disabled_summary = sprintf(
-		__('Current saved settings: time %1$s, recipients %2$s, send even if empty %3$s.', 'ccc-site_guard'),
+		$daily_disabled_summary_format,
 		esc_html($s['daily_report_time']),
 		esc_html($daily_recipients_label),
 		esc_html($daily_even_label)
 	);
 
 	$basic_scope_label = (($s['basic_auth_scope'] ?? 'admin') === 'site')
-		? __('Entire site', 'ccc-site_guard')
-		: __('Admin area', 'ccc-site_guard');
-	$basic_user_label = $has_user ? __('Configured', 'ccc-site_guard') : __('Not set', 'ccc-site_guard');
-	$basic_pass_label = $has_pass ? __('Configured', 'ccc-site_guard') : __('Not set', 'ccc-site_guard');
+		? __('Entire site', 'ccc-site-guard')
+		: __('Admin area', 'ccc-site-guard');
+	$basic_user_label = $has_user ? __('Configured', 'ccc-site-guard') : __('Not set', 'ccc-site-guard');
+	$basic_pass_label = $has_pass ? __('Configured', 'ccc-site-guard') : __('Not set', 'ccc-site-guard');
 	/* translators: %1$s is scope (admin/site), %2$s is username status, %3$s is password status */
+	$basic_disabled_summary_format = __('Current saved settings: scope %1$s, username %2$s, password %3$s.', 'ccc-site-guard');
 	$basic_disabled_summary = sprintf(
-		__('Current saved settings: scope %1$s, username %2$s, password %3$s.', 'ccc-site_guard'),
+		$basic_disabled_summary_format,
 		esc_html($basic_scope_label),
 		esc_html($basic_user_label),
 		esc_html($basic_pass_label)
 	);
-	$basic_disabled_summary_note = __('(Passwords are never displayed.)', 'ccc-site_guard');
+	$basic_disabled_summary_note = __('(Passwords are never displayed.)', 'ccc-site-guard');
 ?>
 	<div class="wrap">
 		<h1><?php echo esc_html(ccc_sg_plugin_name()); ?></h1>
@@ -361,16 +363,16 @@ function ccc_sg_render_settings_page()
 		<form method="post">
 			<?php wp_nonce_field('ccc_sg_save_action'); ?>
 
-			<h2><?php echo esc_html__('1. Daily update report', 'ccc-site_guard'); ?></h2>
+			<h2><?php echo esc_html__('1. Daily update report', 'ccc-site-guard'); ?></h2>
 			<table class="form-table">
 				<tr>
-					<th scope="row"><?php echo esc_html__('Enable', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Enable', 'ccc-site-guard'); ?></th>
 					<td><label>
 							<input id="ccc-sg-enable-daily-report" type="checkbox" name="enable_daily_report" value="1" <?php checked($s['enable_daily_report'], 1); ?>>
-							<?php echo esc_html__('Send a daily summary of available updates.', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('Send a daily summary of available updates.', 'ccc-site-guard'); ?>
 						</label>
 						<div id="ccc-sg-daily-disabled-note" class="ccc-sg-subnote" style="display:<?php echo $daily_enabled ? 'none' : 'block'; ?>;">
-							<?php echo esc_html__('Turn on Enable to configure the schedule and notification settings below. Note: delivery timing depends on site requests (WP-Cron).', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('Turn on Enable to configure the schedule and notification settings below. Note: delivery timing depends on site requests (WP-Cron).', 'ccc-site-guard'); ?>
 							<br>
 							<?php echo esc_html($daily_disabled_summary); ?>
 						</div>
@@ -378,67 +380,67 @@ function ccc_sg_render_settings_page()
 				</tr>
 
 				<tr class="ccc-sg-dep-daily" style="<?php echo esc_attr($daily_row_style); ?>">
-					<th scope="row"><?php echo esc_html__('Send time (site timezone)', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Send time (site timezone)', 'ccc-site-guard'); ?></th>
 					<td>
 						<input type="time" name="daily_report_time" value="<?php echo esc_attr($s['daily_report_time']); ?>">
 						<div class="ccc-sg-subnote">
-							<?php echo esc_html__('This report uses WP-Cron (pseudo-cron). It is triggered by site requests, not by the server clock.', 'ccc-site_guard'); ?><br>
-							<?php echo esc_html__('It will be sent on the first site request *after* the scheduled time. On low-traffic sites, delivery can be delayed.', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('This report uses WP-Cron (pseudo-cron). It is triggered by site requests, not by the server clock.', 'ccc-site-guard'); ?><br>
+							<?php echo esc_html__('It will be sent on the first site request *after* the scheduled time. On low-traffic sites, delivery can be delayed.', 'ccc-site-guard'); ?>
 						</div>
 					</td>
 				</tr>
 
 				<tr class="ccc-sg-dep-daily" style="<?php echo esc_attr($daily_row_style); ?>">
-					<th scope="row"><?php echo esc_html__('Notification email(s)', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Notification email(s)', 'ccc-site-guard'); ?></th>
 					<td>
 						<input type="text" class="regular-text" name="notify_emails"
 							value="<?php echo esc_attr($s['notify_emails']); ?>"
 							placeholder="wp-report@your-company.jp, second@mail.com">
-						<p class="description"><?php echo esc_html__('You can specify multiple addresses separated by commas.', 'ccc-site_guard'); ?></p>
+						<p class="description"><?php echo esc_html__('You can specify multiple addresses separated by commas.', 'ccc-site-guard'); ?></p>
 					</td>
 				</tr>
 
 				<tr class="ccc-sg-dep-daily" style="<?php echo esc_attr($daily_row_style); ?>">
-					<th scope="row"><?php echo esc_html__('Send even when there are no updates', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Send even when there are no updates', 'ccc-site-guard'); ?></th>
 					<td><label>
 							<input type="checkbox" name="send_even_if_empty" value="1" <?php checked($s['send_even_if_empty'], 1); ?>>
-							<?php echo esc_html__('Send a report even when there are no updates.', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('Send a report even when there are no updates.', 'ccc-site-guard'); ?>
 						</label></td>
 				</tr>
 			</table>
 
 			<hr>
 
-			<h2><?php echo esc_html__('2. Security', 'ccc-site_guard'); ?></h2>
+			<h2><?php echo esc_html__('2. Security', 'ccc-site-guard'); ?></h2>
 			<table class="form-table">
 				<tr>
-					<th scope="row"><?php echo esc_html__('REST API user endpoint lock', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('REST API user endpoint lock', 'ccc-site-guard'); ?></th>
 					<td><label>
 							<input type="checkbox" name="enable_rest_user_lock" value="1" <?php checked($s['enable_rest_user_lock'], 1); ?>>
-							<?php echo esc_html__('Disable user-related endpoints such as', 'ccc-site_guard'); ?> <code>/wp/v2/users</code>
+							<?php echo esc_html__('Disable user-related endpoints such as', 'ccc-site-guard'); ?> <code>/wp/v2/users</code>
 						</label></td>
 				</tr>
 
 				<tr>
-					<th scope="row"><?php echo esc_html__('Hide version information', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Hide version information', 'ccc-site-guard'); ?></th>
 					<td><label>
 							<input type="checkbox" name="enable_version_hiding" value="1" <?php checked($s['enable_version_hiding'], 1); ?>>
-							<code>the_generator</code> <?php echo esc_html__('Reduce information exposure (e.g., suppress the_generator).', 'ccc-site_guard'); ?>
+							<code>the_generator</code> <?php echo esc_html__('Reduce information exposure (e.g., suppress the_generator).', 'ccc-site-guard'); ?>
 						</label></td>
 				</tr>
 
 				<tr>
-					<th scope="row"><?php echo esc_html__('Author archive redirect', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Author archive redirect', 'ccc-site-guard'); ?></th>
 					<td>
 						<label>
 							<input type="checkbox" name="enable_author_redirect" value="1" <?php checked($s['enable_author_redirect'], 1); ?>>
-							<?php echo esc_html__('(Optional / advanced) Redirect author pages to avoid user_login enumeration.', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('(Optional / advanced) Redirect author pages to avoid user_login enumeration.', 'ccc-site-guard'); ?>
 						</label>
 						<p>
-							<label><?php echo esc_html__('Slug:', 'ccc-site_guard'); ?>
+							<label><?php echo esc_html__('Slug:', 'ccc-site-guard'); ?>
 								<input type="text" name="author_slug" value="<?php echo esc_attr($s['author_slug']); ?>" class="regular-text">
 							</label><br>
-							<label><?php echo esc_html__('Query key:', 'ccc-site_guard'); ?>
+							<label><?php echo esc_html__('Query key:', 'ccc-site-guard'); ?>
 								<input type="text" name="author_query_key" value="<?php echo esc_attr($s['author_query_key']); ?>" class="regular-text">
 							</label>
 						</p>
@@ -448,27 +450,27 @@ function ccc_sg_render_settings_page()
 
 			<hr>
 
-			<h2><?php echo esc_html__('3. Basic Auth', 'ccc-site_guard'); ?></h2>
+			<h2><?php echo esc_html__('3. Basic Auth', 'ccc-site-guard'); ?></h2>
 			<table class="form-table">
 				<tr>
-					<th scope="row"><?php echo esc_html__('Enable', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Enable', 'ccc-site-guard'); ?></th>
 					<td><label>
 							<input id="ccc-sg-enable-basic-auth" type="checkbox" name="enable_basic_auth" value="1" <?php checked($s['enable_basic_auth'], 1); ?>>
-							<?php echo esc_html__('Enable Basic Auth', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('Enable Basic Auth', 'ccc-site-guard'); ?>
 						</label>
 						<div class="ccc-sg-subnote">
-							<?php echo esc_html__('Status:', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('Status:', 'ccc-site-guard'); ?>
 							<?php if ($basic_ready): ?>
-								<span class="ccc-sg-badge ok"><?php echo esc_html__('Configured', 'ccc-site_guard'); ?></span>
+								<span class="ccc-sg-badge ok"><?php echo esc_html__('Configured', 'ccc-site-guard'); ?></span>
 							<?php else: ?>
-								<span class="ccc-sg-badge ng"><?php echo esc_html__('Not configured', 'ccc-site_guard'); ?></span>
+								<span class="ccc-sg-badge ng"><?php echo esc_html__('Not configured', 'ccc-site-guard'); ?></span>
 							<?php endif; ?>
 							<?php if (!empty($s['enable_basic_auth']) && !$basic_ready): ?>
-								<span class="ccc-sg-subnote"><?php echo esc_html__('Even if enabled, it will not work until both username and password are set.', 'ccc-site_guard'); ?></span>
+								<span class="ccc-sg-subnote"><?php echo esc_html__('Even if enabled, it will not work until both username and password are set.', 'ccc-site-guard'); ?></span>
 							<?php endif; ?>
 						</div>
 						<div id="ccc-sg-basic-disabled-note" class="ccc-sg-subnote" style="display:<?php echo $basic_enabled ? 'none' : 'block'; ?>;">
-							<?php echo esc_html__('Turn on Enable to configure scope, username and password.', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('Turn on Enable to configure scope, username and password.', 'ccc-site-guard'); ?>
 							<br>
 							<?php echo esc_html($basic_disabled_summary); ?>
 							<span style="margin-left:6px;"><?php echo esc_html($basic_disabled_summary_note); ?></span>
@@ -477,37 +479,37 @@ function ccc_sg_render_settings_page()
 				</tr>
 
 				<tr class="ccc-sg-dep-basic" style="<?php echo esc_attr($basic_row_style); ?>">
-					<th scope="row"><?php echo esc_html__('Scope', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Scope', 'ccc-site-guard'); ?></th>
 					<td>
-						<label><input type="radio" name="basic_auth_scope" value="admin" <?php checked($s['basic_auth_scope'], 'admin'); ?>> <?php echo esc_html__('Admin area', 'ccc-site_guard'); ?></label><br>
-						<label><input type="radio" name="basic_auth_scope" value="site" <?php checked($s['basic_auth_scope'], 'site');  ?>> <?php echo esc_html__('Entire site', 'ccc-site_guard'); ?></label>
-						<div class="ccc-sg-subnote"><?php echo esc_html__('Protecting the entire site may affect integrations (APIs, images, forms, etc.).', 'ccc-site_guard'); ?></div>
+						<label><input type="radio" name="basic_auth_scope" value="admin" <?php checked($s['basic_auth_scope'], 'admin'); ?>> <?php echo esc_html__('Admin area', 'ccc-site-guard'); ?></label><br>
+						<label><input type="radio" name="basic_auth_scope" value="site" <?php checked($s['basic_auth_scope'], 'site');  ?>> <?php echo esc_html__('Entire site', 'ccc-site-guard'); ?></label>
+						<div class="ccc-sg-subnote"><?php echo esc_html__('Protecting the entire site may affect integrations (APIs, images, forms, etc.).', 'ccc-site-guard'); ?></div>
 					</td>
 				</tr>
 
 				<tr class="ccc-sg-dep-basic" style="<?php echo esc_attr($basic_row_style); ?>">
-					<th scope="row"><?php echo esc_html__('Username', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Username', 'ccc-site-guard'); ?></th>
 					<td><input type="text" class="regular-text" name="basic_auth_user" value="<?php echo esc_attr($s['basic_auth_user']); ?>"></td>
 				</tr>
 
 				<tr class="ccc-sg-dep-basic" style="<?php echo esc_attr($basic_row_style); ?>">
-					<th scope="row"><?php echo esc_html__('Password', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('Password', 'ccc-site-guard'); ?></th>
 					<td>
 						<?php if ($has_pass): ?>
-							<span class="ccc-sg-badge ok"><?php echo esc_html__('Configured', 'ccc-site_guard'); ?></span>
+							<span class="ccc-sg-badge ok"><?php echo esc_html__('Configured', 'ccc-site-guard'); ?></span>
 						<?php else: ?>
-							<span class="ccc-sg-badge ng"><?php echo esc_html__('Not configured', 'ccc-site_guard'); ?></span>
+							<span class="ccc-sg-badge ng"><?php echo esc_html__('Not configured', 'ccc-site-guard'); ?></span>
 						<?php endif; ?>
 
 						<?php
 						// Button/intro text should differ between first-time setup and already-configured state.
 						$pass_btn_label = $has_pass
-							? __('Change password…', 'ccc-site_guard')
-							: __('Set password…', 'ccc-site_guard');
+							? __('Change password…', 'ccc-site-guard')
+							: __('Set password…', 'ccc-site-guard');
 
 						$pass_box_intro = $has_pass
-							? __('Enter a new password.', 'ccc-site_guard')
-							: __('Set a password.', 'ccc-site_guard');
+							? __('Enter a new password.', 'ccc-site-guard')
+							: __('Set a password.', 'ccc-site-guard');
 						?>
 
 						<p style="margin-top:10px;">
@@ -516,7 +518,7 @@ function ccc_sg_render_settings_page()
 							<?php if ($has_pass): ?>
 								<label style="margin-left:10px;">
 									<input type="checkbox" id="ccc-sg-pass-clear" name="basic_auth_clear" value="1">
-									<?php echo esc_html__('Clear password', 'ccc-site_guard'); ?>
+									<?php echo esc_html__('Clear password', 'ccc-site-guard'); ?>
 								</label>
 							<?php endif; ?>
 						</p>
@@ -524,21 +526,21 @@ function ccc_sg_render_settings_page()
 						<div id="ccc-sg-pass-change-box" style="display:none;">
 							<p style="margin-top:0;"><?php echo esc_html($pass_box_intro); ?></p>
 							<p>
-								<label><?php echo esc_html__('New password', 'ccc-site_guard'); ?><br>
+								<label><?php echo esc_html__('New password', 'ccc-site-guard'); ?><br>
 									<input id="ccc-sg-pass1" type="password" class="regular-text" name="basic_auth_password1" autocomplete="new-password">
 								</label>
 							</p>
 							<p>
-								<label><?php echo esc_html__('Confirm (again)', 'ccc-site_guard'); ?><br>
+								<label><?php echo esc_html__('Confirm (again)', 'ccc-site-guard'); ?><br>
 									<input id="ccc-sg-pass2" type="password" class="regular-text" name="basic_auth_password2" autocomplete="new-password">
 								</label>
 							</p>
 							<p style="margin-bottom:0;">
-								<button class="button" id="ccc-sg-pass-change-cancel"><?php echo esc_html__('Cancel', 'ccc-site_guard'); ?></button>
+								<button class="button" id="ccc-sg-pass-change-cancel"><?php echo esc_html__('Cancel', 'ccc-site-guard'); ?></button>
 							</p>
 						</div>
 
-						<div class="ccc-sg-subnote"><?php echo esc_html__('Passwords are stored as a hash (never as plain text).', 'ccc-site_guard'); ?></div>
+						<div class="ccc-sg-subnote"><?php echo esc_html__('Passwords are stored as a hash (never as plain text).', 'ccc-site-guard'); ?></div>
 					</td>
 				</tr>
 
@@ -546,32 +548,32 @@ function ccc_sg_render_settings_page()
 			</table>
 			<hr>
 
-			<h2><?php echo esc_html__('4. Cleanup', 'ccc-site_guard'); ?></h2>
+			<h2><?php echo esc_html__('4. Cleanup', 'ccc-site-guard'); ?></h2>
 			<table class="form-table">
 				<tr>
-					<th scope="row"><?php echo esc_html__('On deactivation', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('On deactivation', 'ccc-site-guard'); ?></th>
 					<td>
 						<label>
 							<input type="checkbox" name="cleanup_on_deactivate" value="1" <?php checked($s['cleanup_on_deactivate'], 1); ?>>
-							<?php echo esc_html__('Delete settings and related data when the plugin is deactivated.', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('Delete settings and related data when the plugin is deactivated.', 'ccc-site-guard'); ?>
 						</label>
-						<div class="ccc-sg-warning"><?php echo esc_html__('WARNING: This cannot be undone. Keep this OFF for normal use.', 'ccc-site_guard'); ?></div>
+						<div class="ccc-sg-warning"><?php echo esc_html__('WARNING: This cannot be undone. Keep this OFF for normal use.', 'ccc-site-guard'); ?></div>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php echo esc_html__('On deletion', 'ccc-site_guard'); ?></th>
+					<th scope="row"><?php echo esc_html__('On deletion', 'ccc-site-guard'); ?></th>
 					<td>
 						<label>
 							<input type="checkbox" name="cleanup_on_uninstall" value="1" <?php checked($s['cleanup_on_uninstall'], 1); ?>>
-							<?php echo esc_html__('Delete settings and related data when the plugin is deleted.', 'ccc-site_guard'); ?>
+							<?php echo esc_html__('Delete settings and related data when the plugin is deleted.', 'ccc-site-guard'); ?>
 						</label>
-						<div class="ccc-sg-subnote"><?php echo esc_html__('Recommended: Turn ON only if you want a complete wipe on deletion. If enabled, deleting the plugin will permanently remove all settings and related data with no leftovers.', 'ccc-site_guard'); ?></div>
-						<div class="ccc-sg-warning"><?php echo esc_html__('WARNING: If this is ON when you delete the plugin, it cannot be restored (unless you have a backup).', 'ccc-site_guard'); ?></div>
+						<div class="ccc-sg-subnote"><?php echo esc_html__('Recommended: Turn ON only if you want a complete wipe on deletion. If enabled, deleting the plugin will permanently remove all settings and related data with no leftovers.', 'ccc-site-guard'); ?></div>
+						<div class="ccc-sg-warning"><?php echo esc_html__('WARNING: If this is ON when you delete the plugin, it cannot be restored (unless you have a backup).', 'ccc-site-guard'); ?></div>
 					</td>
 				</tr>
 			</table>
 
-			<?php submit_button(__('Save settings', 'ccc-site_guard'), 'primary', 'ccc_sg_save'); ?>
+			<?php submit_button(__('Save settings', 'ccc-site-guard'), 'primary', 'ccc_sg_save'); ?>
 		</form>
 	</div>
 <?php
@@ -749,7 +751,7 @@ function ccc_sg_run_daily_report()
 		if (!function_exists('get_plugins')) require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		$all = function_exists('get_plugins') ? get_plugins() : array();
 
-		$report .= __("Plugins needing update:\n", 'ccc-site_guard');
+		$report .= __("Plugins needing update:\n", 'ccc-site-guard');
 		foreach ($plugins->response as $plugin_file => $info) {
 			$name = isset($all[$plugin_file]['Name']) ? $all[$plugin_file]['Name'] : ($info->slug ?? $plugin_file);
 
@@ -766,8 +768,8 @@ function ccc_sg_run_daily_report()
 			// New (available) version
 			$new = (isset($info->new_version) && $info->new_version !== '') ? (string) $info->new_version : '';
 
-			if ($cur === '') $cur = __('unknown', 'ccc-site_guard');
-			if ($new === '') $new = __('unknown', 'ccc-site_guard');
+			if ($cur === '') $cur = __('unknown', 'ccc-site-guard');
+			if ($new === '') $new = __('unknown', 'ccc-site-guard');
 
 			$report .= "- {$name}: {$cur} → {$new}\n";
 		}
@@ -775,7 +777,7 @@ function ccc_sg_run_daily_report()
 	}
 
 	if (is_object($themes) && !empty($themes->response)) {
-		$report .= __("Themes needing update:\n", 'ccc-site_guard');
+		$report .= __("Themes needing update:\n", 'ccc-site-guard');
 		foreach ($themes->response as $slug => $info) {
 			$theme = wp_get_theme($slug);
 			$name  = ($theme && $theme->exists()) ? $theme->get('Name') : $slug;
@@ -793,8 +795,8 @@ function ccc_sg_run_daily_report()
 			// New (available) version
 			$new = (isset($info['new_version']) && $info['new_version'] !== '') ? (string) $info['new_version'] : '';
 
-			if ($cur === '') $cur = __('unknown', 'ccc-site_guard');
-			if ($new === '') $new = __('unknown', 'ccc-site_guard');
+			if ($cur === '') $cur = __('unknown', 'ccc-site-guard');
+			if ($new === '') $new = __('unknown', 'ccc-site-guard');
 
 			$report .= "- {$name}: {$cur} → {$new}\n";
 		}
@@ -807,7 +809,7 @@ function ccc_sg_run_daily_report()
 				$cur = get_bloginfo('version');
 				$new = $u->version ?? '';
 				/* translators: %1$s is current WordPress version, %2$s is new version available */
-				$report .= sprintf(__("WordPress core update available: %1\$s → %2\$s\n\n", 'ccc-site_guard'), $cur, $new);
+				$report .= sprintf(__("WordPress core update available: %1\$s → %2\$s\n\n", 'ccc-site-guard'), $cur, $new);
 				break;
 			}
 		}
@@ -815,13 +817,13 @@ function ccc_sg_run_daily_report()
 
 	if (trim($report) === '') {
 		if (empty($s['send_even_if_empty'])) return;
-		$report = __("No updates are available today.\n", 'ccc-site_guard');
+		$report = __("No updates are available today.\n", 'ccc-site-guard');
 	}
 
 	$site_name = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
 	/* translators: %1$s is plugin name, %2$s is site name */
-	$subject = sprintf(__("[%1\$s] %2\$s - Daily Update Report", 'ccc-site_guard'), ccc_sg_plugin_name(), $site_name);
-	$body    = __("Daily WordPress Update Report (Available Updates)\n", 'ccc-site_guard') . home_url() . "\n\n" . $report;
+	$subject = sprintf(__("[%1\$s] %2\$s - Daily Update Report", 'ccc-site-guard'), ccc_sg_plugin_name(), $site_name);
+	$body    = __("Daily WordPress Update Report (Available Updates)\n", 'ccc-site-guard') . home_url() . "\n\n" . $report;
 
 	wp_mail($emails, $subject, $body);
 }
@@ -940,7 +942,7 @@ function ccc_sg_basic_auth_challenge($s)
 		header('WWW-Authenticate: Basic realm="' . ccc_sg_header_safe($realm) . '"');
 		header('HTTP/1.0 401 Unauthorized');
 	}
-	echo esc_html__('Authorization required.', 'ccc-site_guard');
+	echo esc_html__('Authorization required.', 'ccc-site-guard');
 	exit;
 }
 
@@ -948,18 +950,20 @@ function ccc_sg_get_basic_auth_credentials()
 {
 	if (isset($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'])) {
 		$user = sanitize_text_field(wp_unslash($_SERVER['PHP_AUTH_USER']));
-		$pass = sanitize_text_field(wp_unslash($_SERVER['PHP_AUTH_PW']));
+		// Do not sanitize/normalize passwords; it can change the credential.
+		$pass = (string) wp_unslash($_SERVER['PHP_AUTH_PW']);
 		return array($user, $pass);
 	}
 
 	$hdr = null;
 	if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-		$hdr = sanitize_text_field(wp_unslash($_SERVER['HTTP_AUTHORIZATION']));
+		// Do not sanitize/normalize the Authorization header (base64 may include + / =).
+		$hdr = (string) wp_unslash($_SERVER['HTTP_AUTHORIZATION']);
 	} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
-		$hdr = sanitize_text_field(wp_unslash($_SERVER['REDIRECT_HTTP_AUTHORIZATION']));
+		$hdr = (string) wp_unslash($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
 	}
 
-	if ($hdr && stripos($hdr, 'basic ') === 0) {
+	if (is_string($hdr) && $hdr !== '' && stripos($hdr, 'basic ') === 0) {
 		$decoded = base64_decode(substr($hdr, 6), true);
 		if ($decoded && strpos($decoded, ':') !== false) {
 			list($u, $p) = explode(':', $decoded, 2);
