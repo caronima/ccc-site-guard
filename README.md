@@ -27,13 +27,13 @@ This plugin monitors your WordPress core, themes, and plugins for available upda
 
 ## Installation
 
-1. Upload ccc-site_guard to the `/wp-content/plugins/` directory.
+1. Upload ccc-site-guard to the `/wp-content/plugins/` directory.
 2. Activate the plugin through the **Plugins** menu in WordPress.
 3. You will find **CCC Site Guard** menu in your WordPress admin panel.
 ## Discover More
 == Discover More ==
 
-This plugin is [developed on GitHub](https://github.com/caronima/ccc-site_guard)
+This plugin is [developed on GitHub](https://github.com/caronima/ccc-site-guard)
 
 ## Changelog
 
@@ -41,4 +41,4 @@ This plugin is [developed on GitHub](https://github.com/caronima/ccc-site_guard)
 
 Tested on WordPress 6.9.
 
-See the [release notes on GitHub](https://github.com/caronima/ccc-site_guard/releases).
+See the [release notes on GitHub](https://github.com/caronima/ccc-site-guard/releases).
