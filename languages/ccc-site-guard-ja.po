@@ -2,33 +2,355 @@
 # This file is distributed under the same license as the CCC Site Guard plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: CCC Site Guard 0.3.2\n"
+"Project-Id-Version: CCC Site Guard 1.0.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/ccc-site_guard\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"POT-Creation-Date: 2025-12-15T00:00:00+00:00\n"
+"PO-Revision-Date: 2025-12-15 16:59+0900\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ja\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-12-12T12:08:36+00:00\n"
-"PO-Revision-Date: 2025-12-12T12:08:36+00:00\n"
-"X-Generator: WP-CLI 2.12.0\n"
-"X-Domain: ccc-site-guard\n"
-"Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 3.8\n"
+"X-Domain: ccc-site-guard\n"
 
 #. Plugin Name of the plugin
-#: ccc-site_guard.php
 msgid "CCC Site Guard"
-msgstr ""
+msgstr "CCC Site Guard"
 
 #. Description of the plugin
-#: ccc-site_guard.php
 msgid ""
 "Consolidated plugin for daily update report emails and security hardening "
 "(author redirect / REST user lock / version hiding / Basic Auth)."
 msgstr ""
+"日次更新レポートメールとセキュリティ強化（著者リダイレクト／RESTユーザーロッ"
+"ク／バージョン非表示／基本認証）を統合したプラグイン。"
 
 #. Author of the plugin
-#: ccc-site_guard.php
 msgid "Caronima Inc."
+msgstr "株式会社カロニマ"
+
+#: ccc-site_guard.php:120
+msgid "Settings"
+msgstr "設定"
+
+#: ccc-site_guard.php:254
+msgid "Please fill in both Basic Auth password fields."
+msgstr "ベーシック認証のパスワード欄を両方とも入力してください。"
+
+#: ccc-site_guard.php:256
+msgid "Basic Auth passwords do not match."
+msgstr "ベーシック認証のパスワードが一致しません。"
+
+#: ccc-site_guard.php:259
+msgid "Settings saved (Basic Auth password updated)."
+msgstr "設定が保存されました（ベーシック認証パスワードが更新されました）。"
+
+#: ccc-site_guard.php:275
+msgid "Settings saved."
+msgstr "設定保存"
+
+#: ccc-site_guard.php:294
+msgid "%d recipient configured"
+msgid_plural "%d recipients configured"
+msgstr[0] "%d 受信者設定済み"
+
+#: ccc-site_guard.php:297
+msgid "Not set"
+msgstr "未設定"
+
+#: ccc-site_guard.php:298
+msgid "On"
+msgstr "On"
+
+#: ccc-site_guard.php:298
+msgid "Off"
+msgstr "Off"
+
+#: ccc-site_guard.php:299
+msgid ""
+"Current saved settings: time %1$s, recipients %2$s, send even if empty %3$s."
+msgstr "保存済み設定：送信時刻 %1$s、通知先 %2$s、更新がない場合も送信 %3$s。"
+
+#: ccc-site_guard.php:303
+msgid "Entire site"
+msgstr "サイト全体"
+
+#: ccc-site_guard.php:304
+msgid "Admin area"
+msgstr "管理画面"
+
+#: ccc-site_guard.php:305
+msgid "Configured"
+msgstr "設定済み"
+
+#: ccc-site_guard.php:307
+msgid "Current saved settings: scope %1$s, username %2$s, password %3$s."
+msgstr "保存済み設定：スコープ %1$s、ユーザー名 %2$s、パスワード %3$s。"
+
+#: ccc-site_guard.php:312
+msgid "(Passwords are never displayed.)"
+msgstr "（パスワードは表示されません。）"
+
+#: ccc-site_guard.php:319
+msgid "1. Daily update report"
+msgstr "1. 日次更新レポート"
+
+#: ccc-site_guard.php:322
+msgid "Enable"
+msgstr "有効化"
+
+#: ccc-site_guard.php:325
+msgid "Send a daily summary of available updates."
+msgstr "利用可能な更新の概要を毎日メールで送信します。"
+
+#: ccc-site_guard.php:328
+msgid ""
+"Turn on Enable to configure the schedule and notification settings below. "
+"Note: delivery timing depends on site requests (WP-Cron)."
 msgstr ""
+"下のスケジュール／通知設定を行うには「有効化」をオンにしてください。※送信タイ"
+"ミングはサイトへのアクセス（WP-Cron）に依存します。"
+
+#: ccc-site_guard.php:335
+msgid "Send time (site timezone)"
+msgstr "送信時刻（サイトのタイムゾーン）"
+
+#: ccc-site_guard.php:339
+msgid ""
+"This report uses WP-Cron (pseudo-cron). It is triggered by site requests, "
+"not by the server clock."
+msgstr ""
+"このレポートは WP-Cron（疑似cron）を使用します。サーバー時刻ではなく、サイト"
+"へのアクセスをきっかけに実行されます。"
+
+#: ccc-site_guard.php:340
+msgid ""
+"It will be sent on the first site request *after* the scheduled time. On low-"
+"traffic sites, delivery can be delayed."
+msgstr ""
+"設定時刻を過ぎてから最初のアクセス時に送信されます。アクセスが少ないサイトで"
+"は送信が遅れる場合があります。"
+
+#: ccc-site_guard.php:346
+msgid "Notification email(s)"
+msgstr "通知先メールアドレス"
+
+#: ccc-site_guard.php:351
+msgid "You can specify multiple addresses separated by commas."
+msgstr "カンマ区切りで複数指定できます。"
+
+#: ccc-site_guard.php:356
+msgid "Send even when there are no updates"
+msgstr "更新がない場合も送信"
+
+#: ccc-site_guard.php:359
+msgid "Send a report even when there are no updates."
+msgstr "更新がない日でもレポートを送信します。"
+
+#: ccc-site_guard.php:366
+msgid "2. Security"
+msgstr "セキュリティ"
+
+#: ccc-site_guard.php:369
+msgid "REST API user endpoint lock"
+msgstr "REST API（ユーザー系）エンドポイントの無効化"
+
+#: ccc-site_guard.php:372
+msgid "Disable user-related endpoints such as"
+msgstr "次のようなユーザー関連エンドポイントを無効化します。"
+
+#: ccc-site_guard.php:377
+msgid "Hide version information"
+msgstr "バージョン情報を隠す"
+
+#: ccc-site_guard.php:381
+msgid "Reduce information exposure (e.g., suppress the_generator)."
+msgstr "情報露出を減らします（例：the_generator の出力を抑止）。"
+
+#: ccc-site_guard.php:386
+msgid "Author archive redirect"
+msgstr "投稿者アーカイブのリダイレクト"
+
+#: ccc-site_guard.php:390
+msgid ""
+"(Optional / advanced) Redirect author pages to avoid user_login enumeration."
+msgstr ""
+"（任意／上級）user_login の列挙を避けるため、投稿者ページをリダイレクトしま"
+"す。"
+
+#: ccc-site_guard.php:393
+msgid "Slug:"
+msgstr "スラッグ："
+
+#: ccc-site_guard.php:396
+msgid "Query key:"
+msgstr "クエリキー："
+
+#: ccc-site_guard.php:405
+msgid "3. Basic Auth"
+msgstr "ベーシック認証"
+
+#: ccc-site_guard.php:410
+msgid "Enable Basic Auth"
+msgstr "ベーシック認証を有効化"
+
+#: ccc-site_guard.php:413
+msgid "Status:"
+msgstr "状態："
+
+#: ccc-site_guard.php:417
+msgid "Not configured"
+msgstr "未設定"
+
+#: ccc-site_guard.php:420
+msgid ""
+"Even if enabled, it will not work until both username and password are set."
+msgstr ""
+"有効化していても、ユーザー名とパスワードの両方が設定されるまでは動作しませ"
+"ん。"
+
+#: ccc-site_guard.php:424
+msgid "Turn on Enable to configure scope, username and password."
+msgstr ""
+"スコープ／ユーザー名／パスワードを設定するには「有効化」をオンにしてくださ"
+"い。"
+
+#: ccc-site_guard.php:433
+msgid "Scope"
+msgstr "適用範囲"
+
+#: ccc-site_guard.php:437
+msgid ""
+"Protecting the entire site may affect integrations (APIs, images, forms, "
+"etc.)."
+msgstr ""
+"サイト全体を保護すると、連携（API／画像／フォーム等）に影響する場合がありま"
+"す。"
+
+#: ccc-site_guard.php:442
+msgid "Username"
+msgstr "ユーザー名"
+
+#: ccc-site_guard.php:447
+msgid "Password"
+msgstr "パスワード"
+
+#: ccc-site_guard.php:458
+msgid "Change password…"
+msgstr "パスワードを変更…"
+
+#: ccc-site_guard.php:459
+msgid "Set password…"
+msgstr "パスワードを設定…"
+
+#: ccc-site_guard.php:462
+msgid "Enter a new password."
+msgstr "新しいパスワードを入力してください。"
+
+#: ccc-site_guard.php:463
+msgid "Set a password."
+msgstr "パスワードを設定してください。"
+
+#: ccc-site_guard.php:471
+msgid "Clear password"
+msgstr "パスワードをクリア"
+
+#: ccc-site_guard.php:478
+msgid "New password"
+msgstr "新しいパスワード"
+
+#: ccc-site_guard.php:484
+msgid "Confirm (again)"
+msgstr "確認（再入力）"
+
+#: ccc-site_guard.php:490
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: ccc-site_guard.php:495
+msgid "Passwords are stored as a hash (never as plain text)."
+msgstr "パスワードはハッシュとして保存されます（平文では保存しません）。"
+
+#: ccc-site_guard.php:503
+msgid "4. Cleanup"
+msgstr "4. クリーンアップ"
+
+#: ccc-site_guard.php:506
+msgid "On deactivation"
+msgstr "無効化時"
+
+#: ccc-site_guard.php:510
+msgid "Delete settings and related data when the plugin is deactivated."
+msgstr "プラグインを無効化したときに設定および関連データを削除します。"
+
+#: ccc-site_guard.php:512
+msgid "WARNING: This cannot be undone. Keep this OFF for normal use."
+msgstr "警告：この操作は元に戻せません。通常はオフのままにしてください。"
+
+#: ccc-site_guard.php:516
+msgid "On deletion"
+msgstr "削除時"
+
+#: ccc-site_guard.php:520
+msgid "Delete settings and related data when the plugin is deleted."
+msgstr "プラグインを削除したときに設定および関連データを削除します。"
+
+#: ccc-site_guard.php:522
+msgid ""
+"Recommended: Turn ON only if you want a complete wipe on deletion. If "
+"enabled, deleting the plugin will permanently remove all settings and "
+"related data with no leftovers."
+msgstr ""
+"推奨：削除時に完全消去したい場合のみオンにしてください。有効な場合、プラグイ"
+"ンを削除すると設定および関連データは残さず完全に削除されます。"
+
+#: ccc-site_guard.php:523
+msgid ""
+"WARNING: If this is ON when you delete the plugin, it cannot be restored "
+"(unless you have a backup)."
+msgstr ""
+"警告：この設定がオンの状態でプラグインを削除すると、（バックアップがない限"
+"り）復元できません。"
+
+#: ccc-site_guard.php:528
+msgid "Save settings"
+msgstr "設定を保存"
+
+#: ccc-site_guard.php:769
+msgid "Plugins needing update:\n"
+msgstr "更新が必要なプラグイン：\n"
+
+#: ccc-site_guard.php:787 ccc-site_guard.php:818
+msgid "unknown"
+msgstr "不明"
+
+#: ccc-site_guard.php:796
+msgid "Themes needing update:\n"
+msgstr "更新が必要なテーマ：\n"
+
+#: ccc-site_guard.php:826
+msgid ""
+"WordPress core update available: %1$s → %2$s\n"
+"\n"
+msgstr ""
+"WordPress 本体の更新があります：%1$s → %2$s\n"
+"\n"
+
+#: ccc-site_guard.php:833
+msgid "No updates are available today.\n"
+msgstr "本日は更新はありません。\n"
+
+#: ccc-site_guard.php:837
+msgid "[%1$s] %2$s - Daily Update Report"
+msgstr "[%1$s] %2$s - 日次更新レポート"
+
+#: ccc-site_guard.php:838
+msgid "Daily WordPress Update Report (Available Updates)\n"
+msgstr "日次 WordPress 更新レポート（利用可能な更新）\n"
+
+#: ccc-site_guard.php:940
+msgid "Authorization required."
+msgstr "認証が必要です。"
