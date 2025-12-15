@@ -3,8 +3,9 @@
 /**
  * Plugin Name: CCC Site Guard
  * Description: Consolidated plugin for daily update report emails and security hardening (author redirect / REST user lock / version hiding / Basic Auth).
- * Version: 0.3.2
+ * Version: 1.0.0
  * Author: Caronima Inc.
+ * Author URI: https://caronima.com
  * Text Domain: ccc-site-guard
  * Domain Path: /languages
  */
