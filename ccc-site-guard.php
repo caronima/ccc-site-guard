@@ -6,6 +6,7 @@
  * Version: 1.0.0
  * Author: Caronima Inc.
  * Author URI: https://caronima.com
+ * Requires PHP: 7.0
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: ccc-site-guard
@@ -14,17 +15,17 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('CCC_SG_OPT_KEY',  'ccc_sg_settings');
-define('CCC_SG_CRON_HOOK', 'ccc_sg_daily_event');
+define('CCCSIG_OPT_KEY',  'cccsig_settings');
+define('CCCSIG_CRON_HOOK', 'cccsig_daily_event');
 
-define('CCC_SG_MENU_SLUG', 'ccc-site-guard');
-define('CCC_SG_CAP', 'manage_options');
+define('CCCSIG_MENU_SLUG', 'ccc-site-guard');
+define('CCCSIG_CAP', 'manage_options');
 
 /**
  * Plugin header values (Plugin Name / Version / etc.) are readable at runtime.
  * If you rename the plugin in the header comment, UI labels and Realm will follow.
  */
-function ccc_sg_plugin_header()
+function cccsig_plugin_header()
 {
 	static $data = null;
 	if ($data !== null) return $data;
@@ -40,18 +41,36 @@ function ccc_sg_plugin_header()
 	return $data;
 }
 
-function ccc_sg_plugin_name()
+function cccsig_plugin_name()
 {
-	$h = ccc_sg_plugin_header();
+	$h = cccsig_plugin_header();
 	$nm = isset($h['name']) && $h['name'] !== '' ? $h['name'] : (isset($h['plugin_name']) ? $h['plugin_name'] : 'CCC Site Guard');
 	return $nm !== '' ? $nm : 'CCC Site Guard';
 }
 
-function ccc_sg_header_safe($value)
+function cccsig_header_safe($value)
 {
 	$value = (string)$value;
 	// Prevent header injection
 	return str_replace(array("\r", "\n"), '', $value);
+}
+
+function cccsig_sanitize_raw_password($value)
+{
+	// Passwords should not be normalized (it may change intended credentials),
+	// but we must strip control characters to avoid header/transport issues.
+	$value = (string) $value;
+	return str_replace(array("\0", "\r", "\n"), '', $value);
+}
+
+function cccsig_sanitize_auth_header($value)
+{
+	// Authorization header may include base64 characters (+/=/etc.).
+	// Strip control characters and non-printable bytes.
+	$value = (string) $value;
+	$value = str_replace(array("\0", "\r", "\n"), '', $value);
+	$value = preg_replace('/[^\x20-\x7E]/', '', $value);
+	return trim($value);
 }
 
 /**
@@ -65,7 +84,7 @@ function ccc_sg_header_safe($value)
 /*--------------------------------------------------------------
  * 設定値取得
  *--------------------------------------------------------------*/
-function ccc_sg_get_settings()
+function cccsig_get_settings()
 {
 	$defaults = array(
 		// 日次レポート
@@ -92,44 +111,44 @@ function ccc_sg_get_settings()
 		'cleanup_on_uninstall'  => 0,
 	);
 
-	$opt = get_option(CCC_SG_OPT_KEY, array());
+	$opt = get_option(CCCSIG_OPT_KEY, array());
 	return array_merge($defaults, is_array($opt) ? $opt : array());
 }
 
 /*--------------------------------------------------------------
  * 管理画面メニュー
  *--------------------------------------------------------------*/
-add_action('admin_menu', 'ccc_sg_add_settings_page');
-function ccc_sg_add_settings_page()
+add_action('admin_menu', 'cccsig_add_settings_page');
+function cccsig_add_settings_page()
 {
 	add_menu_page(
-		ccc_sg_plugin_name(),
-		ccc_sg_plugin_name(),
-		CCC_SG_CAP,
-		CCC_SG_MENU_SLUG,
-		'ccc_sg_render_settings_page',
+		cccsig_plugin_name(),
+		cccsig_plugin_name(),
+		CCCSIG_CAP,
+		CCCSIG_MENU_SLUG,
+		'cccsig_render_settings_page',
 		'dashicons-shield',
 		81
 	);
 
 	// Visible submenu pointing to the same page
 	add_submenu_page(
-		CCC_SG_MENU_SLUG,
-		ccc_sg_plugin_name(),
+		CCCSIG_MENU_SLUG,
+		cccsig_plugin_name(),
 		__('Settings', 'ccc-site-guard'),
-		CCC_SG_CAP,
-		CCC_SG_MENU_SLUG,
-		'ccc_sg_render_settings_page'
+		CCCSIG_CAP,
+		CCCSIG_MENU_SLUG,
+		'cccsig_render_settings_page'
 	);
 }
 
 /*--------------------------------------------------------------
  * 設定ページ用の軽いJS/CSS（A案：変更時だけパス入力を展開）
  *--------------------------------------------------------------*/
-add_action('admin_enqueue_scripts', 'ccc_sg_admin_assets');
-function ccc_sg_admin_assets($hook)
+add_action('admin_enqueue_scripts', 'cccsig_admin_assets');
+function cccsig_admin_assets($hook)
 {
-	if ($hook !== 'toplevel_page_' . CCC_SG_MENU_SLUG) return;
+	if ($hook !== 'toplevel_page_' . CCCSIG_MENU_SLUG) return;
 
 	$js = 'document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("ccc-sg-pass-change-btn");
@@ -224,7 +243,7 @@ function ccc_sg_admin_assets($hook)
 		. '#ccc-sg-pass-change-box{margin-top:10px;padding:12px;border:1px solid #dcdcde;background:#fff;border-radius:8px;max-width:520px}';
 
 	// Use a dedicated handle so inline CSS is reliably printed
-	$h = ccc_sg_plugin_header();
+	$h = cccsig_plugin_header();
 	$ver = isset($h['version']) && $h['version'] !== '' ? $h['version'] : '0.0.0';
 	wp_register_style('ccc-sg-admin', false, array(), $ver);
 	wp_enqueue_style('ccc-sg-admin');
@@ -234,21 +253,21 @@ function ccc_sg_admin_assets($hook)
 /*--------------------------------------------------------------
  * 設定画面
  *--------------------------------------------------------------*/
-function ccc_sg_render_settings_page()
+function cccsig_render_settings_page()
 {
-	if (!current_user_can(CCC_SG_CAP)) return;
+	if (!current_user_can(CCCSIG_CAP)) return;
 
 	$notice = array('type' => '', 'msg' => '');
 
-	if (isset($_POST['ccc_sg_save'])) {
-		check_admin_referer('ccc_sg_save_action');
+	if (isset($_POST['cccsig_save'])) {
+		check_admin_referer('cccsig_save_action');
 
-		$cur = ccc_sg_get_settings();
+		$cur = cccsig_get_settings();
 
 		$save = array(
 			// 日次レポート
 			'enable_daily_report' => isset($_POST['enable_daily_report']) ? 1 : 0,
-			'daily_report_time'   => isset($_POST['daily_report_time']) ? ccc_sg_sanitize_hhmm(sanitize_text_field(wp_unslash($_POST['daily_report_time']))) : $cur['daily_report_time'],
+			'daily_report_time'   => isset($_POST['daily_report_time']) ? cccsig_sanitize_hhmm(sanitize_text_field(wp_unslash($_POST['daily_report_time']))) : $cur['daily_report_time'],
 			'notify_emails'       => isset($_POST['notify_emails']) ? sanitize_text_field(wp_unslash($_POST['notify_emails'])) : '',
 			'send_even_if_empty'  => isset($_POST['send_even_if_empty']) ? 1 : 0,
 
@@ -277,8 +296,8 @@ function ccc_sg_render_settings_page()
 		}
 
 		// Passwords must not be sanitized/normalized; any transformation can break intended credentials.
-		$p1 = isset($_POST['basic_auth_password1']) ? (string) wp_unslash($_POST['basic_auth_password1']) : '';
-		$p2 = isset($_POST['basic_auth_password2']) ? (string) wp_unslash($_POST['basic_auth_password2']) : '';
+		$p1 = isset($_POST['basic_auth_password1']) ? cccsig_sanitize_raw_password((string) wp_unslash($_POST['basic_auth_password1'])) : '';
+		$p2 = isset($_POST['basic_auth_password2']) ? cccsig_sanitize_raw_password((string) wp_unslash($_POST['basic_auth_password2'])) : '';
 
 		if (!$do_clear && ($p1 !== '' || $p2 !== '')) {
 			if ($p1 === '' || $p2 === '') {
@@ -291,23 +310,17 @@ function ccc_sg_render_settings_page()
 			}
 		}
 
-		update_option(CCC_SG_OPT_KEY, $save);
-
-		// 旧オプション互換（必要なら）
-		update_option('ccc_authors', array(
-			'slug'  => $save['author_slug'],
-			'query' => $save['author_query_key'],
-		));
+		update_option(CCCSIG_OPT_KEY, $save);
 
 		// Cron 再設定
-		ccc_sg_reschedule_daily_event();
+		cccsig_reschedule_daily_event();
 
 		if (empty($notice['msg'])) {
 			$notice = array('type' => 'updated', 'msg' => __('Settings saved.', 'ccc-site-guard'));
 		}
 	}
 
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 
 	if (!empty($notice['msg'])) {
 		$cls = ($notice['type'] === 'error') ? 'notice notice-error' : 'notice notice-success';
@@ -323,7 +336,7 @@ function ccc_sg_render_settings_page()
 	$basic_row_style = $basic_enabled ? '' : 'display:none;';
 
 	// Summaries shown when a section is disabled (avoid leaking sensitive values).
-	$daily_recipients = ccc_sg_parse_emails($s['notify_emails']);
+	$daily_recipients = cccsig_parse_emails($s['notify_emails']);
 	$daily_recipient_count = is_array($daily_recipients) ? count($daily_recipients) : 0;
 	$daily_recipients_label = ($daily_recipient_count > 0)
 		? sprintf(
@@ -358,10 +371,10 @@ function ccc_sg_render_settings_page()
 	$basic_disabled_summary_note = __('(Passwords are never displayed.)', 'ccc-site-guard');
 ?>
 	<div class="wrap">
-		<h1><?php echo esc_html(ccc_sg_plugin_name()); ?></h1>
+		<h1><?php echo esc_html(cccsig_plugin_name()); ?></h1>
 
 		<form method="post">
-			<?php wp_nonce_field('ccc_sg_save_action'); ?>
+			<?php wp_nonce_field('cccsig_save_action'); ?>
 
 			<h2><?php echo esc_html__('1. Daily update report', 'ccc-site-guard'); ?></h2>
 			<table class="form-table">
@@ -573,13 +586,13 @@ function ccc_sg_render_settings_page()
 				</tr>
 			</table>
 
-			<?php submit_button(__('Save settings', 'ccc-site-guard'), 'primary', 'ccc_sg_save'); ?>
+			<?php submit_button(__('Save settings', 'ccc-site-guard'), 'primary', 'cccsig_save'); ?>
 		</form>
 	</div>
 <?php
 }
 
-function ccc_sg_sanitize_hhmm($v)
+function cccsig_sanitize_hhmm($v)
 {
 	$v = trim((string)$v);
 	return preg_match('/^\d{2}:\d{2}$/', $v) ? $v : '09:00';
@@ -588,54 +601,51 @@ function ccc_sg_sanitize_hhmm($v)
 /*--------------------------------------------------------------
  * Cron
  *--------------------------------------------------------------*/
-register_activation_hook(__FILE__, 'ccc_sg_activate');
-function ccc_sg_activate()
+register_activation_hook(__FILE__, 'cccsig_activate');
+function cccsig_activate()
 {
-	ccc_sg_reschedule_daily_event();
+	cccsig_reschedule_daily_event();
 }
 
-register_deactivation_hook(__FILE__, 'ccc_sg_deactivate');
-function ccc_sg_deactivate()
+register_deactivation_hook(__FILE__, 'cccsig_deactivate');
+function cccsig_deactivate()
 {
 	// Always remove scheduled cron on deactivation
-	wp_clear_scheduled_hook(CCC_SG_CRON_HOOK);
+	wp_clear_scheduled_hook(CCCSIG_CRON_HOOK);
 
 	// Optional cleanup on deactivation
-	$s = get_option(CCC_SG_OPT_KEY, array());
+	$s = get_option(CCCSIG_OPT_KEY, array());
 	if (is_array($s) && !empty($s['cleanup_on_deactivate'])) {
-		ccc_sg_cleanup_all();
+		cccsig_cleanup_all();
 	}
 }
 
-register_uninstall_hook(__FILE__, 'ccc_sg_uninstall');
-function ccc_sg_uninstall()
+register_uninstall_hook(__FILE__, 'cccsig_uninstall');
+function cccsig_uninstall()
 {
 	// Only clean up if the user opted in
-	$s = get_option(CCC_SG_OPT_KEY, array());
+	$s = get_option(CCCSIG_OPT_KEY, array());
 	if (is_array($s) && !empty($s['cleanup_on_uninstall'])) {
-		ccc_sg_cleanup_all();
+		cccsig_cleanup_all();
 	}
 }
 
 /**
- * クリーンアップ（設定/互換オプション/スケジュール/生成物）
+ * クリーンアップ（設定/スケジュール/生成物）
  */
-function ccc_sg_cleanup_all()
+function cccsig_cleanup_all()
 {
 	// 予定されたCronを除去
-	wp_clear_scheduled_hook(CCC_SG_CRON_HOOK);
+	wp_clear_scheduled_hook(CCCSIG_CRON_HOOK);
 
 	// 設定オプション
-	delete_option(CCC_SG_OPT_KEY);
-
-	// 旧互換オプション（このプラグインが管理している範囲）
-	delete_option('ccc_authors');
+	delete_option(CCCSIG_OPT_KEY);
 
 	// 生成ファイルがある場合（将来拡張用）: uploads/ccc-site-guard を削除
-	ccc_sg_delete_uploads_dir('ccc-site-guard');
+	cccsig_delete_uploads_dir('ccc-site-guard');
 }
 
-function ccc_sg_delete_uploads_dir($subdir)
+function cccsig_delete_uploads_dir($subdir)
 {
 	$uploads = wp_upload_dir();
 	$base = isset($uploads['basedir']) ? $uploads['basedir'] : '';
@@ -651,10 +661,10 @@ function ccc_sg_delete_uploads_dir($subdir)
 	if (strpos($real_target, $real_base) !== 0) return;
 	if (!is_dir($real_target)) return;
 
-	ccc_sg_rrmdir($real_target);
+	cccsig_rrmdir($real_target);
 }
 
-function ccc_sg_rrmdir($dir)
+function cccsig_rrmdir($dir)
 {
 	global $wp_filesystem;
 
@@ -670,7 +680,7 @@ function ccc_sg_rrmdir($dir)
 		if ($item === '.' || $item === '..') continue;
 		$path = $dir . '/' . $item;
 		if (is_dir($path)) {
-			ccc_sg_rrmdir($path);
+			cccsig_rrmdir($path);
 		} else {
 			wp_delete_file($path);
 		}
@@ -681,34 +691,34 @@ function ccc_sg_rrmdir($dir)
 	}
 }
 
-add_action('plugins_loaded', 'ccc_sg_ensure_daily_event_scheduled');
-function ccc_sg_ensure_daily_event_scheduled()
+add_action('plugins_loaded', 'cccsig_ensure_daily_event_scheduled');
+function cccsig_ensure_daily_event_scheduled()
 {
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 	if (empty($s['enable_daily_report'])) return;
 
 	// If the schedule is missing (e.g. after migration/cache flush), recreate it.
-	if (wp_next_scheduled(CCC_SG_CRON_HOOK)) return;
+	if (wp_next_scheduled(CCCSIG_CRON_HOOK)) return;
 
-	$next = ccc_sg_calc_next_run_timestamp($s['daily_report_time']);
-	wp_schedule_event($next, 'daily', CCC_SG_CRON_HOOK);
+	$next = cccsig_calc_next_run_timestamp($s['daily_report_time']);
+	wp_schedule_event($next, 'daily', CCCSIG_CRON_HOOK);
 }
 
-function ccc_sg_reschedule_daily_event()
+function cccsig_reschedule_daily_event()
 {
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 	// This is called on activation / settings-save to apply a new schedule.
-	wp_clear_scheduled_hook(CCC_SG_CRON_HOOK);
+	wp_clear_scheduled_hook(CCCSIG_CRON_HOOK);
 
 	if (empty($s['enable_daily_report'])) return;
 
-	$next = ccc_sg_calc_next_run_timestamp($s['daily_report_time']);
-	if (!wp_next_scheduled(CCC_SG_CRON_HOOK)) {
-		wp_schedule_event($next, 'daily', CCC_SG_CRON_HOOK);
+	$next = cccsig_calc_next_run_timestamp($s['daily_report_time']);
+	if (!wp_next_scheduled(CCCSIG_CRON_HOOK)) {
+		wp_schedule_event($next, 'daily', CCCSIG_CRON_HOOK);
 	}
 }
 
-function ccc_sg_calc_next_run_timestamp($hhmm)
+function cccsig_calc_next_run_timestamp($hhmm)
 {
 	$tz  = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone(get_option('timezone_string') ?: 'UTC');
 	$now = new DateTime('now', $tz);
@@ -721,17 +731,17 @@ function ccc_sg_calc_next_run_timestamp($hhmm)
 	return $run->getTimestamp();
 }
 
-add_action(CCC_SG_CRON_HOOK, 'ccc_sg_run_daily_report');
+add_action(CCCSIG_CRON_HOOK, 'cccsig_run_daily_report');
 
 /*--------------------------------------------------------------
  * 日次レポート（available updatesベース）
  *--------------------------------------------------------------*/
-function ccc_sg_run_daily_report()
+function cccsig_run_daily_report()
 {
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 	if (empty($s['enable_daily_report'])) return;
 
-	$emails = ccc_sg_parse_emails($s['notify_emails']);
+	$emails = cccsig_parse_emails($s['notify_emails']);
 	if (empty($emails)) return;
 
 	if (function_exists('wp_update_plugins')) wp_update_plugins();
@@ -822,13 +832,13 @@ function ccc_sg_run_daily_report()
 
 	$site_name = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
 	/* translators: %1$s is plugin name, %2$s is site name */
-	$subject = sprintf(__("[%1\$s] %2\$s - Daily Update Report", 'ccc-site-guard'), ccc_sg_plugin_name(), $site_name);
+	$subject = sprintf(__("[%1\$s] %2\$s - Daily Update Report", 'ccc-site-guard'), cccsig_plugin_name(), $site_name);
 	$body    = __("Daily WordPress Update Report (Available Updates)\n", 'ccc-site-guard') . home_url() . "\n\n" . $report;
 
 	wp_mail($emails, $subject, $body);
 }
 
-function ccc_sg_parse_emails($raw)
+function cccsig_parse_emails($raw)
 {
 	$list = array();
 	foreach (explode(',', (string)$raw) as $email) {
@@ -844,31 +854,31 @@ function ccc_sg_parse_emails($raw)
 // Register Basic Auth hooks early.
 // - `plugins_loaded` runs before `init`, and before `login_init` / `admin_init` are fired.
 // - Callbacks themselves check plugin settings/scope, so registering them is safe.
-add_action('plugins_loaded', 'ccc_sg_register_basic_auth_hooks', 0);
-function ccc_sg_register_basic_auth_hooks()
+add_action('plugins_loaded', 'cccsig_register_basic_auth_hooks', 0);
+function cccsig_register_basic_auth_hooks()
 {
-	if (!has_action('login_init', 'ccc_sg_basic_auth_on_login')) {
-		add_action('login_init', 'ccc_sg_basic_auth_on_login', 0);
+	if (!has_action('login_init', 'cccsig_basic_auth_on_login')) {
+		add_action('login_init', 'cccsig_basic_auth_on_login', 0);
 	}
-	if (!has_action('admin_init', 'ccc_sg_basic_auth_on_admin')) {
-		add_action('admin_init', 'ccc_sg_basic_auth_on_admin', 0);
+	if (!has_action('admin_init', 'cccsig_basic_auth_on_admin')) {
+		add_action('admin_init', 'cccsig_basic_auth_on_admin', 0);
 	}
-	if (!has_action('init', 'ccc_sg_basic_auth_on_site')) {
-		add_action('init', 'ccc_sg_basic_auth_on_site', 0);
+	if (!has_action('init', 'cccsig_basic_auth_on_site')) {
+		add_action('init', 'cccsig_basic_auth_on_site', 0);
 	}
 }
 
-add_action('init', 'ccc_sg_boot_security', 0);
-function ccc_sg_boot_security()
+add_action('init', 'cccsig_boot_security', 0);
+function cccsig_boot_security()
 {
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 
 	if (!empty($s['enable_author_redirect'])) {
-		add_action('template_redirect', 'ccc_sg_custom_author_redirect', 0);
+		add_action('template_redirect', 'cccsig_custom_author_redirect', 0);
 	}
 
 	if (!empty($s['enable_rest_user_lock'])) {
-		add_filter('rest_endpoints', 'ccc_sg_custom_rest_endpoints', 10, 1);
+		add_filter('rest_endpoints', 'cccsig_custom_rest_endpoints', 10, 1);
 	}
 
 	if (!empty($s['enable_version_hiding'])) {
@@ -880,17 +890,17 @@ function ccc_sg_boot_security()
 }
 
 /* Basic Auth */
-function ccc_sg_basic_auth_on_login()
+function cccsig_basic_auth_on_login()
 {
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 	if (empty($s['enable_basic_auth'])) return;
 	if (($s['basic_auth_scope'] ?? 'admin') !== 'admin') return;
-	ccc_sg_require_basic_auth($s);
+	cccsig_require_basic_auth($s);
 }
 
-function ccc_sg_basic_auth_on_admin()
+function cccsig_basic_auth_on_admin()
 {
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 	if (empty($s['enable_basic_auth'])) return;
 	if (($s['basic_auth_scope'] ?? 'admin') !== 'admin') return;
 
@@ -898,24 +908,24 @@ function ccc_sg_basic_auth_on_admin()
 	if (!is_user_logged_in()) return;
 
 	// Exempt endpoints commonly used for async/background actions.
-	if (ccc_sg_is_exempt_basic_auth_admin_endpoint()) return;
+	if (cccsig_is_exempt_basic_auth_admin_endpoint()) return;
 
-	ccc_sg_require_basic_auth($s);
+	cccsig_require_basic_auth($s);
 }
 
-function ccc_sg_basic_auth_on_site()
+function cccsig_basic_auth_on_site()
 {
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 	if (empty($s['enable_basic_auth'])) return;
 	if (($s['basic_auth_scope'] ?? 'admin') !== 'site') return;
 
 	// Never challenge cron.
-	if (ccc_sg_is_wp_cron()) return;
+	if (cccsig_is_wp_cron()) return;
 
-	ccc_sg_require_basic_auth($s);
+	cccsig_require_basic_auth($s);
 }
 
-function ccc_sg_require_basic_auth($s)
+function cccsig_require_basic_auth($s)
 {
 	// Never challenge internal processes
 	if (defined('DOING_CRON') && DOING_CRON) return;
@@ -925,42 +935,41 @@ function ccc_sg_require_basic_auth($s)
 	$hash = (string)($s['basic_auth_passhash'] ?? '');
 	if ($user === '' || $hash === '') return; // If not configured, do nothing.
 
-	list($in_user, $in_pass) = ccc_sg_get_basic_auth_credentials();
+	list($in_user, $in_pass) = cccsig_get_basic_auth_credentials();
 	if ($in_user === null || $in_pass === null) {
-		ccc_sg_basic_auth_challenge($s);
+		cccsig_basic_auth_challenge($s);
 	}
 
 	if (!hash_equals($user, (string)$in_user) || !wp_check_password((string)$in_pass, $hash)) {
-		ccc_sg_basic_auth_challenge($s);
+		cccsig_basic_auth_challenge($s);
 	}
 }
 
-function ccc_sg_basic_auth_challenge($s)
+function cccsig_basic_auth_challenge($s)
 {
-	$realm = ccc_sg_plugin_name();
+	$realm = cccsig_plugin_name();
 	if (!headers_sent()) {
-		header('WWW-Authenticate: Basic realm="' . ccc_sg_header_safe($realm) . '"');
+		header('WWW-Authenticate: Basic realm="' . cccsig_header_safe($realm) . '"');
 		header('HTTP/1.0 401 Unauthorized');
 	}
 	echo esc_html__('Authorization required.', 'ccc-site-guard');
 	exit;
 }
 
-function ccc_sg_get_basic_auth_credentials()
+function cccsig_get_basic_auth_credentials()
 {
 	if (isset($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'])) {
 		$user = sanitize_text_field(wp_unslash($_SERVER['PHP_AUTH_USER']));
 		// Do not sanitize/normalize passwords; it can change the credential.
-		$pass = (string) wp_unslash($_SERVER['PHP_AUTH_PW']);
+		$pass = cccsig_sanitize_raw_password((string) wp_unslash($_SERVER['PHP_AUTH_PW']));
 		return array($user, $pass);
 	}
 
 	$hdr = null;
 	if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-		// Do not sanitize/normalize the Authorization header (base64 may include + / =).
-		$hdr = (string) wp_unslash($_SERVER['HTTP_AUTHORIZATION']);
+		$hdr = cccsig_sanitize_auth_header((string) wp_unslash($_SERVER['HTTP_AUTHORIZATION']));
 	} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
-		$hdr = (string) wp_unslash($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+		$hdr = cccsig_sanitize_auth_header((string) wp_unslash($_SERVER['REDIRECT_HTTP_AUTHORIZATION']));
 	}
 
 	if (is_string($hdr) && $hdr !== '' && stripos($hdr, 'basic ') === 0) {
@@ -974,14 +983,14 @@ function ccc_sg_get_basic_auth_credentials()
 }
 
 
-function ccc_sg_is_wp_cron()
+function cccsig_is_wp_cron()
 {
 	$uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
 	return (strpos($uri, 'wp-cron.php') !== false);
 }
 
 
-function ccc_sg_request_basename()
+function cccsig_request_basename()
 {
 	$uri  = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
 	$path = wp_parse_url($uri, PHP_URL_PATH);
@@ -989,19 +998,19 @@ function ccc_sg_request_basename()
 	return basename($path);
 }
 
-function ccc_sg_is_exempt_basic_auth_admin_endpoint()
+function cccsig_is_exempt_basic_auth_admin_endpoint()
 {
 	// Exempt endpoints commonly used for async/background actions.
-	$script = ccc_sg_request_basename();
+	$script = cccsig_request_basename();
 	return in_array($script, array('admin-ajax.php', 'admin-post.php', 'async-upload.php'), true);
 }
 
 /* Author redirect */
-function ccc_sg_custom_author_redirect()
+function cccsig_custom_author_redirect()
 {
 	if (!is_author()) return;
 
-	$s = ccc_sg_get_settings();
+	$s = cccsig_get_settings();
 	$slug = trim((string)$s['author_slug'], '/');
 	$key  = (string)$s['author_query_key'];
 
@@ -1016,7 +1025,7 @@ function ccc_sg_custom_author_redirect()
 }
 
 /* REST endpoints lock */
-function ccc_sg_custom_rest_endpoints($endpoints)
+function cccsig_custom_rest_endpoints($endpoints)
 {
 	if (isset($endpoints['/wp/v2/users'])) unset($endpoints['/wp/v2/users']);
 	if (isset($endpoints['/wp/v2/users/(?P<id>[\d]+)'])) unset($endpoints['/wp/v2/users/(?P<id>[\d]+)']);
