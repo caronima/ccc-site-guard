@@ -39,6 +39,6 @@ This plugin is [developed on GitHub](https://github.com/caronima/ccc-site-guard)
 
 ### 1.0.0
 
-Tested on WordPress 6.9.
+Initial release (includes WordPress.org review fixes). Tested on WordPress 6.9.
 
 See the [release notes on GitHub](https://github.com/caronima/ccc-site-guard/releases).
